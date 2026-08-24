@@ -133,12 +133,21 @@ impl Widget for BigText<'_> {
     }
 }
 
+impl<'a> BigText<'a> {
+    pub fn line_layouts(
+        &'a self,
+        area: Rect,
+    ) -> impl IntoIterator<Item = impl IntoIterator<Item = Rect> + use<>> + 'a + use<'a> {
+        line_layouts(area, &self.pixel_size, self.alignment, &self.lines)
+    }
+}
+
 impl Widget for &BigText<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.block.as_ref().render(area, buf);
         let inner = self.block.inner_if_some(area);
 
-        let layout = layout(inner, &self.pixel_size, self.alignment, &self.lines);
+        let layout = self.line_layouts(inner);
         for (line, line_layout) in self.lines.iter().zip(layout) {
             for (g, cell) in line.styled_graphemes(self.style).zip(line_layout) {
                 render_symbol(g, cell, buf, &self.pixel_size);
@@ -149,7 +158,7 @@ impl Widget for &BigText<'_> {
 
 /// Chunk the area into as many x*y cells as possible returned as a 2D iterator of `Rect`s
 /// representing the rows of cells. The size of each cell depends on given font size
-fn layout<'a>(
+fn line_layouts<'a>(
     area: Rect,
     pixel_size: &PixelSize,
     alignment: Alignment,
